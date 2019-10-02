@@ -25,24 +25,45 @@
  * $FreeBSD$
  */
 
-#import "HRBrightnessCursor.h"
-#import "HRHSVColorUtil.h"
+#import "HRColorCursor.h"
 
+@interface HRColorCursor ()
+- (id)initWithPoint:(CGPoint)point;
 
-@implementation HRBrightnessCursor {
+@property (nonatomic) BOOL editing;
+@property (nonatomic, getter=isGrayCursor) BOOL grayCursor;
+
+@end
+
+@implementation HRColorCursor {
     CALayer *_backLayer;
     CALayer *_colorLayer;
-    UILabel *_brightnessLabel;
+    UIColor *_color;
     BOOL _editing;
 }
 
-- (id)init {
-    self = [super initWithFrame:CGRectMake(0, 0, 28, 28)];
+@synthesize color = _color;
+
++ (CGSize)cursorSize {
+    return CGSizeMake(28.0, 28.0f);
+}
+
++ (HRColorCursor *)colorCursorWithPoint:(CGPoint)point {
+    return [[HRColorCursor alloc] initWithPoint:point];
+}
+
+- (id)initWithPoint:(CGPoint)point {
+    CGSize size = [HRColorCursor cursorSize];
+    CGRect frame = CGRectMake(point.x, point.y, size.width, size.height);
+    self = [super initWithFrame:frame];
     if (self) {
-        self.backgroundColor = [UIColor clearColor];
-        self.userInteractionEnabled = NO;
+        [self setBackgroundColor:[UIColor clearColor]];
+        [self setUserInteractionEnabled:FALSE];
+        self.color = [UIColor whiteColor];
+
+        CGRect backFrame = (CGRect) {.origin = CGPointZero, .size = self.frame.size};
         _backLayer = [[CALayer alloc] init];
-        _backLayer.frame = self.frame;
+        _backLayer.frame = backFrame;
         _backLayer.cornerRadius = CGRectGetHeight(self.frame) / 2;
         _backLayer.borderColor = [[UIColor colorWithWhite:0.65 alpha:1.] CGColor];
         _backLayer.borderWidth = 1.0 / [[UIScreen mainScreen] scale];
@@ -50,52 +71,37 @@
         [self.layer addSublayer:_backLayer];
 
         _colorLayer = [[CALayer alloc] init];
-        _colorLayer.frame = CGRectInset(self.frame, 5.5, 5.5);
+        _colorLayer.frame = CGRectInset(backFrame, 5.5, 5.5);
         _colorLayer.cornerRadius = CGRectGetHeight(_colorLayer.frame) / 2;
         [self.layer addSublayer:_colorLayer];
-
-        _brightnessLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 40, 16)];
-        _brightnessLabel.center = CGPointMake(CGRectGetWidth(self.frame) / 2 + 2, -20);
-        _brightnessLabel.backgroundColor = [UIColor clearColor];
-        _brightnessLabel.textAlignment = NSTextAlignmentCenter;
-        _brightnessLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1];
-        _brightnessLabel.alpha = 0;
-        [self addSubview:_brightnessLabel];
     }
     return self;
 }
 
 - (void)setColor:(UIColor *)color {
     _color = color;
+    HRHSVColor hsvColor;
+    HSVColorFromUIColor(_color, &hsvColor);
+    BOOL shouldBeGrayCursor = hsvColor.v > 0.7 && hsvColor.s < 0.4;
+
+
     [CATransaction begin];
     [CATransaction setValue:(id) kCFBooleanTrue
                      forKey:kCATransactionDisableActions];
-    _colorLayer.backgroundColor = [color CGColor];
+    _colorLayer.backgroundColor = [_color CGColor];
+    if (self.isGrayCursor != shouldBeGrayCursor) {
+        if (shouldBeGrayCursor) {
+            _backLayer.borderColor = [[UIColor colorWithWhite:0 alpha:0.3] CGColor];
+            _backLayer.backgroundColor = [[UIColor colorWithWhite:0. alpha:0.2] CGColor];
+        } else {
+            _backLayer.borderColor = [[UIColor colorWithWhite:0.65 alpha:1] CGColor];
+            _backLayer.backgroundColor = [[UIColor colorWithWhite:1. alpha:0.7] CGColor];
+        }
+        self.grayCursor = shouldBeGrayCursor;
+    }
+
     [CATransaction commit];
-
-    HRHSVColor hsvColor;
-    HSVColorFromUIColor(_color, &hsvColor);
-
-    NSMutableAttributedString *status;
-    NSString *percent = [NSString stringWithFormat:@"%d", (int) (hsvColor.v * 100)];
-    NSDictionary *attributes = @{
-            NSFontAttributeName : [UIFont systemFontOfSize:14],
-            NSForegroundColorAttributeName : [UIColor colorWithWhite:0.5 alpha:1]};
-
-    status = [[NSMutableAttributedString alloc] initWithString:percent
-                                                    attributes:attributes];
-
-    NSDictionary *signAttributes = @{
-            NSFontAttributeName : [UIFont systemFontOfSize:12],
-            NSForegroundColorAttributeName : [UIColor colorWithWhite:0.5 alpha:1]};
-
-    NSAttributedString *percentSign;
-    percentSign = [[NSAttributedString alloc] initWithString:@"%"
-                                                  attributes:signAttributes];
-
-    [status appendAttributedString:percentSign];
-
-    _brightnessLabel.attributedText = status;
+    [self setNeedsDisplay];
 }
 
 - (void)setEditing:(BOOL)editing {
@@ -104,16 +110,12 @@
     }
     _editing = editing;
     void (^showState)(void) = ^{
-        _brightnessLabel.alpha = 1.;
-        _brightnessLabel.transform = CGAffineTransformIdentity;
-        _backLayer.transform = CATransform3DMakeScale(1.6, 1.6, 1.0);
-        _colorLayer.transform = CATransform3DMakeScale(1.4, 1.4, 1.0);
+        self->_backLayer.transform = CATransform3DMakeScale(1.6, 1.6, 1.0);
+        self->_colorLayer.transform = CATransform3DMakeScale(1.4, 1.4, 1.0);
     };
     void (^hiddenState)(void) = ^{
-        _brightnessLabel.alpha = 0.;
-        _brightnessLabel.transform = CGAffineTransformMakeTranslation(0, 10);
-        _backLayer.transform = CATransform3DIdentity;
-        _colorLayer.transform = CATransform3DIdentity;
+        self->_backLayer.transform = CATransform3DIdentity;
+        self->_colorLayer.transform = CATransform3DIdentity;
     };
     if (_editing) {
         hiddenState();
@@ -125,3 +127,4 @@
 }
 
 @end
+
