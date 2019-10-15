@@ -163,6 +163,7 @@ const CGFloat kHRColorInfoViewCornerRadius = 3.;
     
     [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
         textField.font = [UIFont fontWithName:@"Courier" size:textField.font.pointSize];
+        textField.text = self->_hexColorLabel.text;
     }];
     
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:NULL]];
