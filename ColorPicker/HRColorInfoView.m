@@ -176,7 +176,7 @@ const CGFloat kHRColorInfoViewCornerRadius = 3.;
         }
         
         picker.color = [self getUIColorObjectFromHexString:text alpha:1];
-        
+        [picker sendActionsForControlEvents:UIControlEventValueChanged];
     }]];
     
     UIViewController *vc = (UIViewController *)picker.nextResponder.nextResponder;
