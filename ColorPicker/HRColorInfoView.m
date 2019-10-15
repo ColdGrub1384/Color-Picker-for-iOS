@@ -178,7 +178,7 @@ const CGFloat kHRColorInfoViewCornerRadius = 3.;
         
     }]];
     
-    UIViewController *vc = (UIViewController *)picker.nextResponder;
+    UIViewController *vc = (UIViewController *)picker.nextResponder.nextResponder;
     [vc presentViewController:alert animated:YES completion:NULL];
 }
 
